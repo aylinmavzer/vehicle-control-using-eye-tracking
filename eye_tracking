@@ -1,0 +1,149 @@
+import cv2 as cv import 
+numpy as np import 
+mediapipe as mp import 
+math import serial 
+import time from tkinter 
+import * from tkinter 
+import ttk 
+#Arduino serial communication code. The port value varies from device to device used. It is controlled from the Device Manager.
+arduino= serial.Serial(port='COM5', baudrate=9600, timeout=.1) window 
+= Tk() 
+window.geometry("360x100") tbOutput = 
+Label(window, text="Output: ") 
+tbOutput.config(font =("Courier", 11),anchor="w") 
+tbOutput.pack() 
+mp_face_mesh = mp.solutions.face_mesh 
+cap = cv.VideoCapture(0) 
+#iris indices
+LEFT_IRIS = [474, 475, 476, 477] 
+RIGHT_IRIS = [469, 470, 471, 472] 
+value="dur" 
+L_H_LEFT = [33] # the far right landmark of the right eye 
+L_H_RIGHT = [133] # the leftmost landmark of the right eye
+R_H_LEFT = [362] # the far right landmark of the left eye 
+R_H_RIGHT = [263] # the leftmost landmark of the left eye
+UPPER_LEFT= [159] # the uppermost landmark of the left eye
+UPPER_RIGHT= [257] # the uppermost landmark of the right eye
+LOWER_LEFT=[145] # lowermost landmark of the left eye
+LOWER_RIGHT=[253] # the lowermost landmark of the right eye
+left = 0 right 
+= 0 up=0 
+lower=0 
+t_direction ="dur" 
+#Function that calculates output command
+def direction(direction): value = 10 
+global left global right global up 
+global lower global t_direction if 
+direction == "left": 
+ left = left+1 
+if left>value: 
+ arduino.write(b'L') 
+ left = 0 
+right = 0 
+lower =0 up 
+= 0 
+ t_direction = "SOL" 
+elif direction == "right": 
+right = right+1 if 
+right>value: 
+arduino.write(b'R') 
+ left = 0 right 
+= 0 lower =0 
+up = 0 t_direction = 
+"SAĞ" elif direction == 
+"upper": 
+ up = up +1 if 
+up>value: 
+arduino.write(b'F') 
+ left = 0 
+right = 0 
+lower =0 
+ up = 0 
+t_direction = "YUKARI" elif 
+direction == "lower": 
+ lower = lower+1 
+if lower>value: 
+ arduino.write(b'B') 
+ left = 0 
+right = 0 
+lower =0 up 
+= 0 
+ t_direction = "AŞAĞI" 
+ 
+ 
+ return t_direction 
+#Function that calculates Euclidean distances of eye points
+def euclidean_distance(point1, point2): 
+ x1, y1 =point1.ravel() 
+x2, y2 =point2.ravel() 
+ distance = math.sqrt((x2-x1)**2 + (y2-y1)**2) 
+return distance 
+#Finding the position of the iris 
+def iris_position(iris_center, right_point, 
+left_point,lower_point,upper_point): 
+ center_to_right_dist = euclidean_distance(iris_center, right_point) 
+horizontal_distance = euclidean_distance(right_point, left_point) 
+center_to_upper = euclidean_distance(iris_center, upper_point) 
+vertical_distance = euclidean_distance(upper_point, lower_point) 
+rlratio = center_to_right_dist/horizontal_distance ulratio = 
+center_to_upper/vertical_distance 
+ iris_position ="" if 
+rlratio<0.42 and ulratio<0.65: 
+iris_position="right" 
+ 
+ elif rlratio>=0.57 : 
+iris_position = "left" 
+ 
+ elif rlratio>0.45 and rlratio<0.55 and ulratio>0.45 and ulratio<0.57 : 
+ iris_position = "upper" 
+ 
+ elif rlratio>0.45 and rlratio<0.60 and ulratio>0.55 and ulratio<0.70: 
+ iris_position = "lower" 
+ 
+else : 
+ iris_position = "center" 
+ return iris_position
+ 
+with mp_face_mesh.FaceMesh(max_num_faces=2, refine_landmarks=True, 
+min_detection_confidence=0.5, min_tracking_confidence=0.5) as face_mesh: while True: 
+ ret, frame = cap.read() 
+if not ret: break 
+ frame = cv.flip(frame, 1) #bilgisayar kamerasının gösterdiği frame çevirilmeli ayna görüntüsü yakalamak için 
+rgb_frame = cv.cvtColor(frame, cv.COLOR_BGR2RGB) #Mediapipe'ın RGB renk formatına ihtiyacı var ancak 
+OpenCV BGR kullanıyor 
+ img_h, img_w = frame.shape[:2] 
+results = face_mesh.process(rgb_frame) 
+if results.multi_face_landmarks: 
+ mesh_points=np.array([np.multiply([p.x, p.y], [img_w, img_h]).astype(int) for p in 
+results.multi_face_landmarks[0].landmark]) 
+ 
+ 
+(l_cx, l_cy), l_radius = cv.minEnclosingCircle(mesh_points[LEFT_IRIS]) 
+ (r_cx,r_cy), r_radius = cv.minEnclosingCircle(mesh_points[RIGHT_IRIS]) 
+
+center_left = np.array([l_cx, l_cy], dtype=np.int32) center_right 
+= np.array([r_cx, r_cy], dtype=np.int32) 
+
+cv.circle(frame, center_left, int(l_radius), (255, 0, 255), 1, cv.LINE_AA) cv.circle(frame, 
+center_right, int(r_radius), (255, 0, 255), 1, cv.LINE_AA) 
+
+ cv.circle(frame, mesh_points[R_H_RIGHT][0], 2, (0, 255, 255), -1, cv.LINE_AA) 
+cv.circle(frame, mesh_points[R_H_LEFT][0], 2, (0, 255, 255), -1, cv.LINE_AA) cv.circle(frame, 
+mesh_points[UPPER_RIGHT][0], 2, (0, 255, 255), -1, cv.LINE_AA) cv.circle(frame, 
+mesh_points[LOWER_RIGHT][0], 2, (0, 255, 255), -1, cv.LINE_AA) 
+ 
+value = iris_position(center_left, mesh_points[R_H_RIGHT] [0],mesh_points[R_H_LEFT] 
+[0],mesh_points[LOWER_RIGHT][0],mesh_points[UPPER_RIGHT][0]) 
+value = direction(value) 
+ 
+ tbOutput.config(text=f"GİDİLEN YÖN: {value}") 
+ 
+ cv.imshow("img", frame) 
+key = cv.waitKey(150) if 
+key ==ord("q"): 
+Doküman No: FR-1557; Revizyon Tarihi: 23.09.2019; Revizyon No: 00
+ break 
+ window.update() 
+ 
+cap.release() 
+cv.destroyAllWindows()
