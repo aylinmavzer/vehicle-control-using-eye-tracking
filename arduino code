@@ -44,7 +44,7 @@ Serial.write(53);
  analogWrite(motorA1, 0); analogWrite(motorA2, 0); 
  analogWrite(motorB1, 0); analogWrite(motorB2, 0); 
 steps=0; 
-Doküman No: FR-1557; Revizyon Tarihi: 23.09.2019; Revizyon No: 00
+
  durum = 'S'; 
 isDriving=0; 
 Serial.write(53); 
