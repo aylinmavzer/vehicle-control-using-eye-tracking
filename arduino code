@@ -1,0 +1,84 @@
+const int motorA1 = 5; // L298N'in IN3  left back
+const int motorA2 = 6; // L298N'in IN1 right back
+const int motorB1 = 9; // L298N'in IN2  right forward 
+const int motorB2 = 10; // L298N'in IN4  left forward
+// 
+int durum; int Hiz=150; int steps; int isDriving = 0; 
+void setup() { 
+pinMode(motorA1, OUTPUT); 
+pinMode(motorA2, OUTPUT); 
+pinMode(motorB1, OUTPUT); 
+ pinMode(motorB2, OUTPUT); 
+ steps = 0; durum='S'; 
+Serial.begin(9600); attachInterrupt(1, 
+counter, FALLING); 
+} 
+ 
+void counter() 
+{ 
+ 
+ steps++; 
+} 
+void loop() { 
+ 
+ if(isDriving==0){ 
+if(Serial.available() > 0){ 
+ durum = Serial.read(); 
+ } 
+ }else if(steps>100&&durum=='F'){ 
+analogWrite(motorA1, 0); analogWrite(motorA2, 0); 
+ analogWrite(motorB1, 0); analogWrite(motorB2, 0); 
+steps=0; durum = 'S'; isDriving=0; 
+Serial.write(53); 
+ }else if(steps>120&&durum=='B'){ 
+analogWrite(motorA1, 0); analogWrite(motorA2, 0); 
+ analogWrite(motorB1, 0); analogWrite(motorB2, 0); 
+steps=0; durum = 'S'; isDriving=0; 
+Serial.write(53); 
+ }else if(steps>25&&(durum == 'L')){ 
+analogWrite(motorA1, 0); analogWrite(motorA2, 0); 
+ analogWrite(motorB1, 0); analogWrite(motorB2, 0); 
+steps=0; durum = 'S'; isDriving=0; 
+Serial.write(53); 
+ }else if(durum == 'R'){ 
+ analogWrite(motorA1, 0); analogWrite(motorA2, 0); 
+ analogWrite(motorB1, 0); analogWrite(motorB2, 0); 
+steps=0; 
+Doküman No: FR-1557; Revizyon Tarihi: 23.09.2019; Revizyon No: 00
+ durum = 'S'; 
+isDriving=0; 
+Serial.write(53); 
+ } 
+ 
+ 
+ /******************** forward *************************/ 
+ if (durum == 'F') { 
+ analogWrite(motorB1, Hiz); analogWrite(motorA1, 0); 
+analogWrite(motorB2, Hiz); analogWrite(motorA2, 0); 
+isDriving=1; 
+ } 
+ /****************** back ****************************/ 
+ else if (durum == 'B') { 
+ analogWrite(motorB1, 0); analogWrite(motorA1, Hiz); 
+ analogWrite(motorB2, 0); analogWrite(motorA2, Hiz); 
+isDriving=1; 
+ } 
+ /********************** right *************************/ 
+ else if (durum == 'R') { 
+ analogWrite(motorB2, Hiz); analogWrite(motorA2, 0); 
+ analogWrite(motorB1, 0); analogWrite(motorA1, 0); 
+ delay(300); 
+ isDriving=1; 
+ } 
+ /*********************** left *************************/ 
+ else if (durum == 'L') { 
+ analogWrite(motorA1, 0); analogWrite(motorA2, 0); 
+ analogWrite(motorB1, Hiz); analogWrite(motorB2, 0); 
+ isDriving=1; 
+ } 
+ /********************* stop ************************/ 
+ else if (durum == 'S'){ 
+ analogWrite(motorA1, 0); analogWrite(motorA2, 0); 
+analogWrite(motorB1, 0); analogWrite(motorB2, 0); isDriving=0; 
+ } 
+}
